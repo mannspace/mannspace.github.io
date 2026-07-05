@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karaoke Mixer</title>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: #fff; padding: 20px; text-align: center; }
+        .box { max-width: 400px; margin: 0 auto; background: #222; padding: 20px; border-radius: 8px; }
+        video { width: 100%; display: none; margin-top: 15px; border-radius: 4px; }
+        button { background: #00adb5; color: #fff; border: none; padding: 12px; width: 100%; border-radius: 4px; font-weight: bold; margin-top: 15px; }
+        button:disabled { background: #444; }
+        .slider-group { margin-top: 15px; text-align: left; }
+        input[type="range"] { width: 100%; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>Karaoke Mixer</h2>
+    
+    <label style="background:#333; padding:10px; display:block; border-radius:4px; cursor:pointer;">
+        📁 Choose Video File
+        <input type="file" id="video-upload" accept="video/*" style="display:none;">
+    </label>
+
+    <video id="bg-video" controls playsinline></video>
+
+    <button id="start-btn" disabled>1. Select Video First</button>
+    
+    <div class="slider-group">
+        <label>Mic Volume</label>
+        <input type="range" id="mic-volume" min="0" max="2" step="0.1" value="1" disabled>
+    </div>
+    <div class="slider-group">
+        <label>Video Volume</label>
+        <input type="range" id="video-volume" min="0" max="2" step="0.1" value="1" disabled>
+    </div>
+    
+    <p id="status" style="color:#ff2e63; font-size:13px; margin-top:15px;">Select a video to begin.</p>
+</div>
+
+<script>
+    const videoUpload = document.getElementById('video-upload');
+    const startBtn = document.getElementById('start-btn');
+    const video = document.getElementById('bg-video');
+    const micSlider = document.getElementById('mic-volume');
+    const videoSlider = document.getElementById('video-volume');
+    const statusText = document.getElementById('status');
+
+    let audioCtx, micGain, videoGain, videoSource;
+
+    videoUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            video.src = URL.createObjectURL(file);
+            video.style.display = "block";
+            startBtn.disabled = false;
+            startBtn.textContent = "2. Initialize Mic & Mixer";
+            statusText.textContent = "Video loaded. Click the button above to start mic.";
+            statusText.style.color = "#fff";
+        }
+    });
+
+    startBtn.addEventListener('click', async () => {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
+            });
+
+            const micSource = audioCtx.createMediaStreamSource(stream);
+            micGain = audioCtx.createGain();
+            micSource.connect(micGain);
+            micGain.connect(audioCtx.destination);
+
+            if (!videoSource) { videoSource = audioCtx.createMediaElementSource(video); }
+            videoGain = audioCtx.createGain();
+            videoSource.connect(videoGain);
+            videoGain.connect(audioCtx.destination);
+
+            micSlider.disabled = false;
+            videoSlider.disabled = false;
+            startBtn.disabled = true;
+            startBtn.textContent = "🎤 Mixer Ready";
+            statusText.textContent = "Mixer active! Adjust sliders and play video.";
+            statusText.style.color = "#00adb5";
+
+            if (audioCtx.state === 'suspended') { await audioCtx.resume(); }
+        } catch (err) {
+            statusText.style.color = "#ff2e63";
+            statusText.textContent = "Mic error. Make sure you are using HTTPS and granted permissions.";
+        }
+    });
+
+    micSlider.addEventListener('input', (e) => { if (micGain) micGain.gain.value = e.target.value; });
+    videoSlider.addEventListener('input', (e) => { if (videoGain) videoGain.gain.value = e.target.value; });
+</script>
+
+</body>
+</html>
