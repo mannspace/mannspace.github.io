@@ -3,67 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Karaoke Mixer</title>
+    <title>Karaoke Studio Pro + Recorder</title>
     <style>
-        body { font-family: sans-serif; background: #121212; color: #fff; padding: 20px; text-align: center; }
-        .box { max-width: 400px; margin: 0 auto; background: #222; padding: 20px; border-radius: 8px; }
-        video { width: 100%; display: none; margin-top: 15px; border-radius: 4px; }
-        button { background: #00adb5; color: #fff; border: none; padding: 12px; width: 100%; border-radius: 4px; font-weight: bold; margin-top: 15px; }
-        button:disabled { background: #444; }
-        .slider-group { margin-top: 15px; text-align: left; }
-        input[type="range"] { width: 100%; }
+        body { font-family: -apple-system, sans-serif; background: #121212; color: #fff; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 15px; }
+        h2 { color: #00adb5; text-align: center; margin: 5px 0; }
+        .panel { background: #222831; padding: 15px; border-radius: 8px; }
+        
+        video { width: 100%; border-radius: 8px; display: none; background: #000; margin-bottom: 15px; }
+        #yt-container { position: relative; width: 100%; padding-bottom: 56.25%; height: 0; display: none; border-radius: 8px; overflow: hidden; margin-bottom: 15px; }
+        #yt-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+
+        .input-group { display: flex; gap: 10px; margin-top: 10px; }
+        input[type="text"] { flex: 1; padding: 10px; border-radius: 4px; border: 1px solid #393e46; background: #1a1a1a; color: white; }
+        button { background: #00adb5; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-load { background: #ff2e63; }
+        button:disabled { background: #393e46; color: #888; }
+        
+        .slider-group { display: flex; flex-direction: column; gap: 5px; margin-top: 15px; }
+        label { font-size: 13px; font-weight: bold; color: #eee; display: flex; justify-content: space-between; }
+        input[type="range"] { width: 100%; accent-color: #00adb5; }
+        
+        .status { font-size: 13px; color: #ff2e63; text-align: center; margin-top: 10px; }
+        
+        /* Recording Panel Styles */
+        .rec-panel { background: #2c1a1a; border: 1px solid #ff2e63; display: none; }
+        .rec-controls { display: flex; gap: 10px; margin-top: 10px; }
+        .rec-controls button { flex: 1; }
+        #start-rec { background: #ff2e63; }
+        #stop-rec { background: #393e46; }
+        #download-link { display: none; text-align: center; margin-top: 10px; background: #4e9f3d; padding: 10px; border-radius: 6px; text-decoration: none; color: white; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="box">
-    <h2>Karaoke Mixer</h2>
-    
-    <label style="background:#333; padding:10px; display:block; border-radius:4px; cursor:pointer;">
-        📁 Choose Video File
-        <input type="file" id="video-upload" accept="video/*" style="display:none;">
-    </label>
+<div class="container">
+    <h2>Karaoke Studio Pro</h2>
 
-    <video id="bg-video" controls playsinline></video>
+    <!-- 1. Media Source Selection -->
+    <div class="panel">
+        <label>Option A: Local Video (Recordable)</label>
+        <input type="file" id="video-upload" accept="video/*" style="margin-top: 5px; width: 100%;">
+        <hr style="border: 1px solid #333; margin: 15px 0;">
+        <label>Option B: YouTube Link (Cannot Record)</label>
+        <div class="input-group">
+            <input type="text" id="yt-url" placeholder="Paste YouTube Link here...">
+            <button class="btn-load" id="yt-load-btn">Load YT</button>
+        </div>
+    </div>
 
-    <button id="start-btn" disabled>1. Select Video First</button>
-    
-    <div class="slider-group">
-        <label>Mic Volume</label>
-        <input type="range" id="mic-volume" min="0" max="2" step="0.1" value="1" disabled>
+    <video id="local-video" controls playsinline></video>
+    <div id="yt-container"></div>
+
+    <!-- 2. Audio Mixer Controls -->
+    <div class="panel">
+        <button id="start-mic-btn" style="width: 100%; padding: 15px; font-size: 16px;">🎤 Turn On Microphone</button>
+        <div class="slider-group">
+            <label>Mic Boost / Volume <span id="mic-val">100%</span></label>
+            <input type="range" id="mic-volume" min="0" max="5" step="0.1" value="1" disabled>
+        </div>
+        <div class="slider-group">
+            <label>Echo Amount <span id="echo-val">20%</span></label>
+            <input type="range" id="echo-volume" min="0" max="1" step="0.05" value="0.2" disabled>
+        </div>
+        <div class="slider-group" id="local-vid-vol-container">
+            <label>Local Video Volume <span id="vid-val">100%</span></label>
+            <input type="range" id="video-volume" min="0" max="2" step="0.1" value="1" disabled>
+        </div>
     </div>
-    <div class="slider-group">
-        <label>Video Volume</label>
-        <input type="range" id="video-volume" min="0" max="2" step="0.1" value="1" disabled>
+
+    <!-- 3. Recording Panel -->
+    <div class="panel rec-panel" id="rec-panel">
+        <label>🔴 Session Recorder</label>
+        <div class="rec-controls">
+            <button id="start-rec">Start Recording</button>
+            <button id="stop-rec" disabled>Stop & Save</button>
+        </div>
+        <a id="download-link" href="#">⬇️ Download Performance</a>
     </div>
     
-    <p id="status" style="color:#ff2e63; font-size:13px; margin-top:15px;">Select a video to begin.</p>
+    <p class="status" id="status-text">Choose a local video or paste a YouTube link.</p>
 </div>
 
 <script>
     const videoUpload = document.getElementById('video-upload');
-    const startBtn = document.getElementById('start-btn');
-    const video = document.getElementById('bg-video');
+    const ytUrlInput = document.getElementById('yt-url');
+    const ytLoadBtn = document.getElementById('yt-load-btn');
+    const localVideo = document.getElementById('local-video');
+    const ytContainer = document.getElementById('yt-container');
+    const startMicBtn = document.getElementById('start-mic-btn');
     const micSlider = document.getElementById('mic-volume');
+    const echoSlider = document.getElementById('echo-volume');
     const videoSlider = document.getElementById('video-volume');
-    const statusText = document.getElementById('status');
+    const vidVolContainer = document.getElementById('local-vid-vol-container');
+    const statusText = document.getElementById('status-text');
+    
+    // Recording Elements
+    const recPanel = document.getElementById('rec-panel');
+    const startRecBtn = document.getElementById('start-rec');
+    const stopRecBtn = document.getElementById('stop-rec');
+    const downloadLink = document.getElementById('download-link');
 
-    let audioCtx, micGain, videoGain, videoSource;
+    let audioCtx, micGain, videoGain, delayNode, feedbackNode, compressor, audioDest;
+    let isMicActive = false;
+    let usingLocalVideo = false;
+    
+    // Recording Variables
+    let mediaRecorder;
+    let recordedChunks = [];
+
+    // --- MEDIA HANDLING ---
 
     videoUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
-            video.src = URL.createObjectURL(file);
-            video.style.display = "block";
-            startBtn.disabled = false;
-            startBtn.textContent = "2. Initialize Mic & Mixer";
-            statusText.textContent = "Video loaded. Click the button above to start mic.";
-            statusText.style.color = "#fff";
+            ytContainer.style.display = 'none';
+            localVideo.src = URL.createObjectURL(file);
+            localVideo.style.display = 'block';
+            vidVolContainer.style.display = 'flex';
+            usingLocalVideo = true;
+            statusText.textContent = "Local video loaded. Turn on the mic to enable recording.";
+            statusText.style.color = "#00adb5";
         }
     });
 
-    startBtn.addEventListener('click', async () => {
+    ytLoadBtn.addEventListener('click', () => {
+        const ytId = extractYouTubeID(ytUrlInput.value);
+        if (ytId) {
+            localVideo.style.display = 'none';
+            localVideo.pause();
+            vidVolContainer.style.display = 'none'; 
+            recPanel.style.display = 'none'; // Hide recorder for YT
+            usingLocalVideo = false;
+            
+            ytContainer.style.display = 'block';
+            ytContainer.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+            statusText.textContent = "YouTube loaded (Recording disabled). Turn on the mic to sing.";
+        } else {
+            alert("Invalid YouTube link");
+        }
+    });
+
+    function extractYouTubeID(url) {
+        const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
+        return (match && match[2].length === 11) ? match[2] : null;
+    }
+
+    // --- AUDIO MIXER ---
+
+    startMicBtn.addEventListener('click', async () => {
+        if (isMicActive) return;
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
@@ -71,30 +162,120 @@
 
             const micSource = audioCtx.createMediaStreamSource(stream);
             micGain = audioCtx.createGain();
+            
+            compressor = audioCtx.createDynamicsCompressor();
+            compressor.threshold.value = -30;
+            compressor.knee.value = 10;
+            compressor.ratio.value = 12;
+            compressor.attack.value = 0;
+            compressor.release.value = 0.25;
+
+            delayNode = audioCtx.createDelay();
+            delayNode.delayTime.value = 0.25; 
+            feedbackNode = audioCtx.createGain();
+            feedbackNode.gain.value = 0.2; 
+
+            // Setup Recording Destination
+            audioDest = audioCtx.createMediaStreamDestination();
+
+            // Mic Routing
             micSource.connect(micGain);
-            micGain.connect(audioCtx.destination);
+            micGain.connect(compressor);
+            micGain.connect(delayNode);
+            delayNode.connect(feedbackNode);
+            feedbackNode.connect(delayNode); 
+            delayNode.connect(compressor); 
+            
+            // Connect mic output to speakers AND recorder destination
+            compressor.connect(audioCtx.destination);
+            compressor.connect(audioDest);
 
-            if (!videoSource) { videoSource = audioCtx.createMediaElementSource(video); }
-            videoGain = audioCtx.createGain();
-            videoSource.connect(videoGain);
-            videoGain.connect(audioCtx.destination);
+            // Local Video Routing
+            if (!videoGain) {
+                const videoSource = audioCtx.createMediaElementSource(localVideo);
+                videoGain = audioCtx.createGain();
+                videoSource.connect(videoGain);
+                // Connect video output to speakers AND recorder destination
+                videoGain.connect(audioCtx.destination);
+                videoGain.connect(audioDest);
+            }
 
-            micSlider.disabled = false;
-            videoSlider.disabled = false;
-            startBtn.disabled = true;
-            startBtn.textContent = "🎤 Mixer Ready";
-            statusText.textContent = "Mixer active! Adjust sliders and play video.";
-            statusText.style.color = "#00adb5";
-
-            if (audioCtx.state === 'suspended') { await audioCtx.resume(); }
+            micSlider.disabled = echoSlider.disabled = videoSlider.disabled = false;
+            startMicBtn.style.backgroundColor = "#4e9f3d";
+            startMicBtn.textContent = "🎙️ Mic Active & Boosted";
+            isMicActive = true;
+            
+            if (usingLocalVideo) recPanel.style.display = 'block';
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+            
         } catch (err) {
-            statusText.style.color = "#ff2e63";
-            statusText.textContent = "Mic error. Make sure you are using HTTPS and granted permissions.";
+            alert("Microphone Error. Check permissions and HTTPS.");
         }
     });
 
-    micSlider.addEventListener('input', (e) => { if (micGain) micGain.gain.value = e.target.value; });
-    videoSlider.addEventListener('input', (e) => { if (videoGain) videoGain.gain.value = e.target.value; });
+    // --- RECORDING LOGIC ---
+
+    startRecBtn.addEventListener('click', () => {
+        recordedChunks = [];
+        const combinedStream = new MediaStream();
+        
+        // 1. Add mixed audio track
+        combinedStream.addTrack(audioDest.stream.getAudioTracks()[0]);
+        
+        // 2. Add video track from the local HTML5 video
+        // (Uses the experimental captureStream API)
+        const captureFunc = localVideo.captureStream || localVideo.mozCaptureStream;
+        if (captureFunc) {
+            const vidStream = captureFunc.call(localVideo);
+            if (vidStream.getVideoTracks().length > 0) {
+                combinedStream.addTrack(vidStream.getVideoTracks()[0]);
+            }
+        } else {
+            console.warn("Video capture not supported on this browser. Audio only will be recorded.");
+        }
+
+        // Initialize MediaRecorder
+        const options = { mimeType: 'video/webm' };
+        try {
+            mediaRecorder = new MediaRecorder(combinedStream, options);
+        } catch (e) {
+            mediaRecorder = new MediaRecorder(combinedStream); // Fallback
+        }
+
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            downloadLink.href = url;
+            downloadLink.download = 'my_karaoke_performance.webm';
+            downloadLink.style.display = 'block';
+        };
+
+        mediaRecorder.start();
+        localVideo.play(); // Auto-start video when recording starts
+        
+        startRecBtn.disabled = true;
+        stopRecBtn.disabled = false;
+        startRecBtn.textContent = "Recording...";
+        downloadLink.style.display = 'none';
+    });
+
+    stopRecBtn.addEventListener('click', () => {
+        mediaRecorder.stop();
+        localVideo.pause(); // Pause video when recording stops
+        
+        startRecBtn.disabled = false;
+        stopRecBtn.disabled = true;
+        startRecBtn.textContent = "Start Recording";
+    });
+
+    // Sliders
+    micSlider.addEventListener('input', (e) => { if(micGain) micGain.gain.value = e.target.value; document.getElementById('mic-val').textContent = Math.round(e.target.value * 100) + "%"; });
+    echoSlider.addEventListener('input', (e) => { if(feedbackNode) feedbackNode.gain.value = e.target.value; document.getElementById('echo-val').textContent = Math.round(e.target.value * 100) + "%"; });
+    videoSlider.addEventListener('input', (e) => { if(videoGain) videoGain.gain.value = e.target.value; document.getElementById('vid-val').textContent = Math.round(e.target.value * 100) + "%"; });
 </script>
 
 </body>
