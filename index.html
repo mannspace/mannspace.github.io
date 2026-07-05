@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Karaoke Studio Pro v2</title>
+    <title>Karaoke Studio Pro v3</title>
     <style>
         /* Modern UI Variables */
         :root {
             --primary: #00e5ff;
             --danger: #ff1744;
             --success: #00e676;
+            --warning: #ffea00;
             --bg-gradient: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
             --card-bg: rgba(255, 255, 255, 0.05);
             --card-border: rgba(255, 255, 255, 0.1);
@@ -27,36 +28,19 @@
             min-height: 100vh;
         }
 
-        .container {
-            width: 100%;
-            max-width: 500px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
+        .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 20px; }
         h2 { text-align: center; margin: 0; font-weight: 300; letter-spacing: 1px; color: var(--primary); }
         
-        /* Glassmorphism Cards */
         .card {
-            background: var(--card-bg);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--card-border);
-            padding: 20px;
-            border-radius: 16px;
+            background: var(--card-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border); padding: 20px; border-radius: 16px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
         .card-header {
-            font-size: 14px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 15px;
-            color: #aaa;
-            border-bottom: 1px solid var(--card-border);
-            padding-bottom: 10px;
+            font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 15px; color: #aaa; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center;
         }
 
         /* Media Players */
@@ -75,7 +59,6 @@
         button {
             background: var(--primary); color: #000; border: none; padding: 12px 16px;
             border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
         }
         button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 229, 255, 0.4); }
         button:disabled { background: rgba(255,255,255,0.1); color: #666; cursor: not-allowed; transform: none; box-shadow: none; }
@@ -83,49 +66,47 @@
         .btn-yt { background: var(--danger); color: white; }
         .btn-yt:hover:not(:disabled) { box-shadow: 0 4px 15px rgba(255, 23, 68, 0.4); }
         .btn-mic { width: 100%; padding: 16px; font-size: 16px; margin-bottom: 15px; }
+        .btn-auto { background: #ab47bc; color: white; width: 100%; margin-bottom: 15px; }
+        .btn-auto:hover:not(:disabled) { box-shadow: 0 4px 15px rgba(171, 71, 188, 0.4); }
         
-        /* File Upload Styling */
         .file-upload-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; margin-bottom: 15px; }
         .file-upload-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; height: 100%; }
         .file-upload-btn { background: rgba(255,255,255,0.1); color: white; width: 100%; text-align: center; border: 1px dashed var(--card-border); }
 
-        /* Modern Sliders */
+        /* Sliders */
         .slider-group { margin-bottom: 15px; }
         .slider-group:last-child { margin-bottom: 0; }
         label.slider-label { font-size: 13px; font-weight: 500; color: #eee; display: flex; justify-content: space-between; margin-bottom: 8px; }
         input[type="range"] { -webkit-appearance: none; width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 5px; outline: none; }
         input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--primary); cursor: pointer; transition: 0.2s; }
-        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
         input[type="range"]:disabled::-webkit-slider-thumb { background: #666; }
 
-        /* Status & Recorder */
-        .status { font-size: 13px; color: var(--primary); text-align: center; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; }
-        .rec-controls { display: flex; gap: 10px; }
+        /* Recorder */
+        .rec-controls { display: flex; gap: 10px; margin-top: 10px; }
         .rec-controls button { flex: 1; }
         #start-rec { background: var(--danger); color: white; }
         #stop-rec { background: rgba(255,255,255,0.1); color: white; }
         #download-link { display: none; text-align: center; margin-top: 15px; background: var(--success); padding: 12px; border-radius: 8px; text-decoration: none; color: black; font-weight: bold; }
+        .rec-warning { font-size: 12px; color: var(--warning); text-align: center; margin-top: 10px; display: none; }
         
-        .badge { background: var(--danger); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; vertical-align: middle; margin-left: 5px; }
+        .badge { background: var(--danger); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; }
+        .badge-pro { background: #ab47bc; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>Karaoke Studio</h2>
-    <div class="status" id="status-text">Select media to begin. Use headphones for zero feedback.</div>
 
     <!-- Media Source -->
     <div class="card">
         <div class="card-header">1. Select Media</div>
-        
         <div class="file-upload-wrapper">
-            <button class="file-upload-btn">📁 Choose Local Video (Supports Recording)</button>
+            <button class="file-upload-btn">📁 Choose Local Video (Enables Recording)</button>
             <input type="file" id="video-upload" accept="video/*">
         </div>
-        
         <div class="input-group">
-            <input type="text" id="yt-url" placeholder="Paste YouTube Link here...">
+            <input type="text" id="yt-url" placeholder="Paste YouTube Link...">
             <button class="btn-yt" id="yt-load-btn">Load YT</button>
         </div>
     </div>
@@ -155,25 +136,31 @@
 
     <!-- Anti-Feedback Engine -->
     <div class="card" id="feedback-panel">
-        <div class="card-header">3. Anti-Feedback Tools <span class="badge">PRO</span></div>
-        <p style="font-size: 12px; color: #aaa; margin-top: 0; line-height: 1.4;">Stop the humming/screeching by cutting out problem frequencies. Keep speaker away from mic.</p>
+        <div class="card-header">
+            3. Smart Anti-Feedback 
+            <span class="badge badge-pro">AI</span>
+        </div>
+        <button class="btn-auto" id="auto-calibrate-btn" disabled>✨ Auto-Calibrate to Room</button>
         
         <div class="slider-group">
             <label class="slider-label">Hum Reducer (Low Cut) <span id="hum-val">20 Hz</span></label>
-            <input type="range" id="hum-filter" min="20" max="400" step="10" value="20" disabled title="Slide right to remove deep humming sounds">
+            <input type="range" id="hum-filter" min="20" max="400" step="10" value="20" disabled>
         </div>
-        
         <div class="slider-group">
             <label class="slider-label">Screech Reducer (High Cut) <span id="screech-val">20000 Hz</span></label>
-            <input type="range" id="screech-filter" min="4000" max="20000" step="500" value="20000" disabled title="Slide left to remove high-pitched ringing">
+            <input type="range" id="screech-filter" min="4000" max="20000" step="500" value="20000" disabled>
         </div>
     </div>
 
     <!-- Recorder -->
-    <div class="card" id="rec-panel" style="display: none;">
-        <div class="card-header">4. Session Recorder</div>
+    <div class="card" id="rec-panel">
+        <div class="card-header">
+            4. Session Recorder
+            <span class="badge">REC</span>
+        </div>
+        <p class="rec-warning" id="rec-warning">⚠️ Recording is locked. Choose a Local Video to enable.</p>
         <div class="rec-controls">
-            <button id="start-rec">🔴 Start</button>
+            <button id="start-rec" disabled>🔴 Start</button>
             <button id="stop-rec" disabled>⏹ Stop & Save</button>
         </div>
         <a id="download-link" href="#">⬇️ Download Performance</a>
@@ -188,6 +175,7 @@
     const localVideo = document.getElementById('local-video');
     const ytContainer = document.getElementById('yt-container');
     const startMicBtn = document.getElementById('start-mic-btn');
+    const autoCalibrateBtn = document.getElementById('auto-calibrate-btn');
     
     // Audio Sliders
     const micSlider = document.getElementById('mic-volume');
@@ -196,16 +184,13 @@
     const humSlider = document.getElementById('hum-filter');
     const screechSlider = document.getElementById('screech-filter');
     
-    const vidVolContainer = document.getElementById('local-vid-vol-container');
-    const statusText = document.getElementById('status-text');
-    
     // Recording Elements
-    const recPanel = document.getElementById('rec-panel');
     const startRecBtn = document.getElementById('start-rec');
     const stopRecBtn = document.getElementById('stop-rec');
     const downloadLink = document.getElementById('download-link');
+    const recWarning = document.getElementById('rec-warning');
 
-    let audioCtx, micGain, videoGain, delayNode, feedbackNode, compressor, audioDest;
+    let audioCtx, micSource, micGain, videoGain, delayNode, feedbackNode, compressor, audioDest;
     let humFilterNode, screechFilterNode;
     let isMicActive = false, usingLocalVideo = false;
     let mediaRecorder, recordedChunks = [];
@@ -217,25 +202,27 @@
             ytContainer.style.display = 'none';
             localVideo.src = URL.createObjectURL(file);
             localVideo.style.display = 'block';
-            vidVolContainer.style.display = 'block';
             usingLocalVideo = true;
-            statusText.textContent = "Local video loaded. Turn on mic to enable recording.";
-            document.querySelector('.file-upload-btn').textContent = `📁 ${file.name.substring(0, 25)}...`;
+            document.querySelector('.file-upload-btn').textContent = `📁 ${file.name.substring(0, 20)}...`;
+            
+            // Unlock Recorder
+            recWarning.style.display = 'none';
+            if(isMicActive) startRecBtn.disabled = false;
         }
     });
 
     ytLoadBtn.addEventListener('click', () => {
         const ytId = ytUrlInput.value.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
         if (ytId && ytId[2].length === 11) {
-            localVideo.style.display = 'none';
-            localVideo.pause();
-            vidVolContainer.style.display = 'none'; 
-            recPanel.style.display = 'none'; 
+            localVideo.style.display = 'none'; localVideo.pause();
             usingLocalVideo = false;
-            
             ytContainer.style.display = 'block';
             ytContainer.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId[2]}?autoplay=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-            statusText.textContent = "YouTube loaded. Note: Cannot record YouTube sessions.";
+            
+            // Lock Recorder
+            recWarning.style.display = 'block';
+            recWarning.textContent = "⚠️ YouTube loaded. Recording is disabled due to browser security rules.";
+            startRecBtn.disabled = true;
         } else alert("Invalid YouTube link");
     });
 
@@ -245,43 +232,33 @@
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
         try {
-            // Turned Echo Cancellation ON to help fight speaker feedback naturally
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } 
             });
 
-            const micSource = audioCtx.createMediaStreamSource(stream);
+            micSource = audioCtx.createMediaStreamSource(stream);
             
-            // 1. Anti-Feedback: High-Pass Filter (Removes deep humming)
             humFilterNode = audioCtx.createBiquadFilter();
-            humFilterNode.type = 'highpass';
-            humFilterNode.frequency.value = 20; // Default: let everything through
+            humFilterNode.type = 'highpass'; humFilterNode.frequency.value = 20;
 
-            // 2. Anti-Feedback: Low-Pass Filter (Removes high-pitched screeching)
             screechFilterNode = audioCtx.createBiquadFilter();
-            screechFilterNode.type = 'lowpass';
-            screechFilterNode.frequency.value = 20000; // Default: let everything through
+            screechFilterNode.type = 'lowpass'; screechFilterNode.frequency.value = 20000;
 
             micGain = audioCtx.createGain();
-            
             compressor = audioCtx.createDynamicsCompressor();
-            compressor.threshold.value = -30;
-            compressor.ratio.value = 12;
+            compressor.threshold.value = -30; compressor.ratio.value = 12;
 
-            delayNode = audioCtx.createDelay();
-            delayNode.delayTime.value = 0.25; 
-            feedbackNode = audioCtx.createGain();
-            feedbackNode.gain.value = 0.2; 
-
+            delayNode = audioCtx.createDelay(); delayNode.delayTime.value = 0.25; 
+            feedbackNode = audioCtx.createGain(); feedbackNode.gain.value = 0.2; 
             audioDest = audioCtx.createMediaStreamDestination();
 
-            // Routing: Mic -> EQ Filters -> Gain -> Effects -> Compressor
+            // Routing
             micSource.connect(humFilterNode);
             humFilterNode.connect(screechFilterNode);
             screechFilterNode.connect(micGain);
             
-            micGain.connect(compressor); // Dry signal
-            micGain.connect(delayNode);  // Wet signal (Echo)
+            micGain.connect(compressor); 
+            micGain.connect(delayNode);  
             delayNode.connect(feedbackNode);
             feedbackNode.connect(delayNode); 
             delayNode.connect(compressor); 
@@ -299,22 +276,89 @@
 
             // Enable UI
             [micSlider, echoSlider, videoSlider, humSlider, screechSlider].forEach(s => s.disabled = false);
+            autoCalibrateBtn.disabled = false;
+            if (usingLocalVideo) startRecBtn.disabled = false;
+            
             startMicBtn.style.background = "var(--success)";
             startMicBtn.textContent = "🎙️ Mic & Filters Active";
             isMicActive = true;
             
-            if (usingLocalVideo) recPanel.style.display = 'block';
             if (audioCtx.state === 'suspended') await audioCtx.resume();
-            
         } catch (err) { alert("Mic Error. Check permissions/HTTPS."); }
+    });
+
+    // --- AUTO CALIBRATE LOGIC ---
+    autoCalibrateBtn.addEventListener('click', () => {
+        autoCalibrateBtn.disabled = true;
+        autoCalibrateBtn.textContent = "🤫 Listening to room (3s)...";
+        
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 1024;
+        micSource.connect(analyser); // Tap into raw mic input
+        
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        
+        let lowNoise = 0, highNoise = 0, totalNoise = 0, samples = 0;
+        
+        const sampleInterval = setInterval(() => {
+            analyser.getByteFrequencyData(dataArray);
+            for(let i=0; i<bufferLength; i++) {
+                let freq = i * (audioCtx.sampleRate / 2) / bufferLength;
+                let val = dataArray[i];
+                totalNoise += val;
+                if (freq < 400) lowNoise += val;
+                if (freq > 4000) highNoise += val;
+            }
+            samples++;
+        }, 100);
+        
+        setTimeout(() => {
+            clearInterval(sampleInterval);
+            
+            // Averages
+            lowNoise = (lowNoise / samples) / (400 / (audioCtx.sampleRate/2/bufferLength));
+            highNoise = (highNoise / samples) / ((audioCtx.sampleRate/2 - 4000) / (audioCtx.sampleRate/2/bufferLength));
+            totalNoise = (totalNoise / samples) / bufferLength;
+            
+            // Smart Calculations
+            let newHum = 20, newScreech = 20000, newBoost = 1.5;
+            
+            if (lowNoise > 30) newHum = 150;
+            if (lowNoise > 80) newHum = 250;
+            
+            if (highNoise > 20) newScreech = 12000;
+            if (highNoise > 60) newScreech = 8000;
+            
+            if (totalNoise < 10) newBoost = 3.5; // Quiet room, boost mic
+            else if (totalNoise > 40) newBoost = 1.0; // Loud room, lower mic
+            
+            // Apply to Audio Nodes
+            humFilterNode.frequency.value = newHum;
+            screechFilterNode.frequency.value = newScreech;
+            micGain.gain.value = newBoost;
+            
+            // Update UI Sliders
+            humSlider.value = newHum; document.getElementById('hum-val').textContent = newHum + " Hz";
+            screechSlider.value = newScreech; document.getElementById('screech-val').textContent = newScreech + " Hz";
+            micSlider.value = newBoost; document.getElementById('mic-val').textContent = Math.round(newBoost * 100) + "%";
+            
+            autoCalibrateBtn.textContent = "✅ Calibrated Successfully!";
+            autoCalibrateBtn.style.background = "var(--success)";
+            
+            setTimeout(() => {
+                autoCalibrateBtn.disabled = false;
+                autoCalibrateBtn.textContent = "✨ Auto-Calibrate to Room";
+                autoCalibrateBtn.style.background = "#ab47bc";
+            }, 3000);
+            
+        }, 3000);
     });
 
     // --- SLIDERS ---
     micSlider.addEventListener('input', e => { if(micGain) micGain.gain.value = e.target.value; document.getElementById('mic-val').textContent = Math.round(e.target.value * 100) + "%"; });
     echoSlider.addEventListener('input', e => { if(feedbackNode) feedbackNode.gain.value = e.target.value; document.getElementById('echo-val').textContent = Math.round(e.target.value * 100) + "%"; });
     videoSlider.addEventListener('input', e => { if(videoGain) videoGain.gain.value = e.target.value; document.getElementById('vid-val').textContent = Math.round(e.target.value * 100) + "%"; });
-    
-    // Feedback Control Events
     humSlider.addEventListener('input', e => { if(humFilterNode) humFilterNode.frequency.value = e.target.value; document.getElementById('hum-val').textContent = e.target.value + " Hz"; });
     screechSlider.addEventListener('input', e => { if(screechFilterNode) screechFilterNode.frequency.value = e.target.value; document.getElementById('screech-val').textContent = e.target.value + " Hz"; });
 
