@@ -3,98 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Karaoke Studio Pro + Recorder</title>
+    <title>Karaoke Studio Pro v2</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #121212; color: #fff; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 15px; }
-        h2 { color: #00adb5; text-align: center; margin: 5px 0; }
-        .panel { background: #222831; padding: 15px; border-radius: 8px; }
+        /* Modern UI Variables */
+        :root {
+            --primary: #00e5ff;
+            --danger: #ff1744;
+            --success: #00e676;
+            --bg-gradient: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-gradient);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        h2 { text-align: center; margin: 0; font-weight: 300; letter-spacing: 1px; color: var(--primary); }
         
-        video { width: 100%; border-radius: 8px; display: none; background: #000; margin-bottom: 15px; }
-        #yt-container { position: relative; width: 100%; padding-bottom: 56.25%; height: 0; display: none; border-radius: 8px; overflow: hidden; margin-bottom: 15px; }
+        /* Glassmorphism Cards */
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            color: #aaa;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 10px;
+        }
+
+        /* Media Players */
+        video { width: 100%; border-radius: 12px; display: none; background: #000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        #yt-container { position: relative; width: 100%; padding-bottom: 56.25%; height: 0; display: none; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         #yt-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
 
-        .input-group { display: flex; gap: 10px; margin-top: 10px; }
-        input[type="text"] { flex: 1; padding: 10px; border-radius: 4px; border: 1px solid #393e46; background: #1a1a1a; color: white; }
-        button { background: #00adb5; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .btn-load { background: #ff2e63; }
-        button:disabled { background: #393e46; color: #888; }
+        /* Inputs & Buttons */
+        .input-group { display: flex; gap: 10px; }
+        input[type="text"] {
+            flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--card-border);
+            background: rgba(0,0,0,0.2); color: white; outline: none; transition: 0.3s;
+        }
+        input[type="text"]:focus { border-color: var(--primary); }
         
-        .slider-group { display: flex; flex-direction: column; gap: 5px; margin-top: 15px; }
-        label { font-size: 13px; font-weight: bold; color: #eee; display: flex; justify-content: space-between; }
-        input[type="range"] { width: 100%; accent-color: #00adb5; }
+        button {
+            background: var(--primary); color: #000; border: none; padding: 12px 16px;
+            border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 229, 255, 0.4); }
+        button:disabled { background: rgba(255,255,255,0.1); color: #666; cursor: not-allowed; transform: none; box-shadow: none; }
         
-        .status { font-size: 13px; color: #ff2e63; text-align: center; margin-top: 10px; }
+        .btn-yt { background: var(--danger); color: white; }
+        .btn-yt:hover:not(:disabled) { box-shadow: 0 4px 15px rgba(255, 23, 68, 0.4); }
+        .btn-mic { width: 100%; padding: 16px; font-size: 16px; margin-bottom: 15px; }
         
-        /* Recording Panel Styles */
-        .rec-panel { background: #2c1a1a; border: 1px solid #ff2e63; display: none; }
-        .rec-controls { display: flex; gap: 10px; margin-top: 10px; }
+        /* File Upload Styling */
+        .file-upload-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; margin-bottom: 15px; }
+        .file-upload-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; height: 100%; }
+        .file-upload-btn { background: rgba(255,255,255,0.1); color: white; width: 100%; text-align: center; border: 1px dashed var(--card-border); }
+
+        /* Modern Sliders */
+        .slider-group { margin-bottom: 15px; }
+        .slider-group:last-child { margin-bottom: 0; }
+        label.slider-label { font-size: 13px; font-weight: 500; color: #eee; display: flex; justify-content: space-between; margin-bottom: 8px; }
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 5px; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--primary); cursor: pointer; transition: 0.2s; }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+        input[type="range"]:disabled::-webkit-slider-thumb { background: #666; }
+
+        /* Status & Recorder */
+        .status { font-size: 13px; color: var(--primary); text-align: center; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; }
+        .rec-controls { display: flex; gap: 10px; }
         .rec-controls button { flex: 1; }
-        #start-rec { background: #ff2e63; }
-        #stop-rec { background: #393e46; }
-        #download-link { display: none; text-align: center; margin-top: 10px; background: #4e9f3d; padding: 10px; border-radius: 6px; text-decoration: none; color: white; font-weight: bold; }
+        #start-rec { background: var(--danger); color: white; }
+        #stop-rec { background: rgba(255,255,255,0.1); color: white; }
+        #download-link { display: none; text-align: center; margin-top: 15px; background: var(--success); padding: 12px; border-radius: 8px; text-decoration: none; color: black; font-weight: bold; }
+        
+        .badge { background: var(--danger); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; vertical-align: middle; margin-left: 5px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Karaoke Studio Pro</h2>
+    <h2>Karaoke Studio</h2>
+    <div class="status" id="status-text">Select media to begin. Use headphones for zero feedback.</div>
 
-    <!-- 1. Media Source Selection -->
-    <div class="panel">
-        <label>Option A: Local Video (Recordable)</label>
-        <input type="file" id="video-upload" accept="video/*" style="margin-top: 5px; width: 100%;">
-        <hr style="border: 1px solid #333; margin: 15px 0;">
-        <label>Option B: YouTube Link (Cannot Record)</label>
+    <!-- Media Source -->
+    <div class="card">
+        <div class="card-header">1. Select Media</div>
+        
+        <div class="file-upload-wrapper">
+            <button class="file-upload-btn">📁 Choose Local Video (Supports Recording)</button>
+            <input type="file" id="video-upload" accept="video/*">
+        </div>
+        
         <div class="input-group">
             <input type="text" id="yt-url" placeholder="Paste YouTube Link here...">
-            <button class="btn-load" id="yt-load-btn">Load YT</button>
+            <button class="btn-yt" id="yt-load-btn">Load YT</button>
         </div>
     </div>
 
+    <!-- Players -->
     <video id="local-video" controls playsinline></video>
     <div id="yt-container"></div>
 
-    <!-- 2. Audio Mixer Controls -->
-    <div class="panel">
-        <button id="start-mic-btn" style="width: 100%; padding: 15px; font-size: 16px;">🎤 Turn On Microphone</button>
+    <!-- Audio Mixer -->
+    <div class="card">
+        <div class="card-header">2. Vocal Mixer</div>
+        <button class="btn-mic" id="start-mic-btn">🎤 Turn On Microphone</button>
+        
         <div class="slider-group">
-            <label>Mic Boost / Volume <span id="mic-val">100%</span></label>
+            <label class="slider-label">Mic Boost <span id="mic-val">100%</span></label>
             <input type="range" id="mic-volume" min="0" max="5" step="0.1" value="1" disabled>
         </div>
         <div class="slider-group">
-            <label>Echo Amount <span id="echo-val">20%</span></label>
+            <label class="slider-label">Echo / Reverb <span id="echo-val">20%</span></label>
             <input type="range" id="echo-volume" min="0" max="1" step="0.05" value="0.2" disabled>
         </div>
         <div class="slider-group" id="local-vid-vol-container">
-            <label>Local Video Volume <span id="vid-val">100%</span></label>
+            <label class="slider-label">Music Volume <span id="vid-val">100%</span></label>
             <input type="range" id="video-volume" min="0" max="2" step="0.1" value="1" disabled>
         </div>
     </div>
 
-    <!-- 3. Recording Panel -->
-    <div class="panel rec-panel" id="rec-panel">
-        <label>🔴 Session Recorder</label>
+    <!-- Anti-Feedback Engine -->
+    <div class="card" id="feedback-panel">
+        <div class="card-header">3. Anti-Feedback Tools <span class="badge">PRO</span></div>
+        <p style="font-size: 12px; color: #aaa; margin-top: 0; line-height: 1.4;">Stop the humming/screeching by cutting out problem frequencies. Keep speaker away from mic.</p>
+        
+        <div class="slider-group">
+            <label class="slider-label">Hum Reducer (Low Cut) <span id="hum-val">20 Hz</span></label>
+            <input type="range" id="hum-filter" min="20" max="400" step="10" value="20" disabled title="Slide right to remove deep humming sounds">
+        </div>
+        
+        <div class="slider-group">
+            <label class="slider-label">Screech Reducer (High Cut) <span id="screech-val">20000 Hz</span></label>
+            <input type="range" id="screech-filter" min="4000" max="20000" step="500" value="20000" disabled title="Slide left to remove high-pitched ringing">
+        </div>
+    </div>
+
+    <!-- Recorder -->
+    <div class="card" id="rec-panel" style="display: none;">
+        <div class="card-header">4. Session Recorder</div>
         <div class="rec-controls">
-            <button id="start-rec">Start Recording</button>
-            <button id="stop-rec" disabled>Stop & Save</button>
+            <button id="start-rec">🔴 Start</button>
+            <button id="stop-rec" disabled>⏹ Stop & Save</button>
         </div>
         <a id="download-link" href="#">⬇️ Download Performance</a>
     </div>
-    
-    <p class="status" id="status-text">Choose a local video or paste a YouTube link.</p>
 </div>
 
 <script>
+    // Elements
     const videoUpload = document.getElementById('video-upload');
     const ytUrlInput = document.getElementById('yt-url');
     const ytLoadBtn = document.getElementById('yt-load-btn');
     const localVideo = document.getElementById('local-video');
     const ytContainer = document.getElementById('yt-container');
     const startMicBtn = document.getElementById('start-mic-btn');
+    
+    // Audio Sliders
     const micSlider = document.getElementById('mic-volume');
     const echoSlider = document.getElementById('echo-volume');
     const videoSlider = document.getElementById('video-volume');
+    const humSlider = document.getElementById('hum-filter');
+    const screechSlider = document.getElementById('screech-filter');
+    
     const vidVolContainer = document.getElementById('local-vid-vol-container');
     const statusText = document.getElementById('status-text');
     
@@ -105,178 +206,149 @@
     const downloadLink = document.getElementById('download-link');
 
     let audioCtx, micGain, videoGain, delayNode, feedbackNode, compressor, audioDest;
-    let isMicActive = false;
-    let usingLocalVideo = false;
-    
-    // Recording Variables
-    let mediaRecorder;
-    let recordedChunks = [];
+    let humFilterNode, screechFilterNode;
+    let isMicActive = false, usingLocalVideo = false;
+    let mediaRecorder, recordedChunks = [];
 
     // --- MEDIA HANDLING ---
-
     videoUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
             ytContainer.style.display = 'none';
             localVideo.src = URL.createObjectURL(file);
             localVideo.style.display = 'block';
-            vidVolContainer.style.display = 'flex';
+            vidVolContainer.style.display = 'block';
             usingLocalVideo = true;
-            statusText.textContent = "Local video loaded. Turn on the mic to enable recording.";
-            statusText.style.color = "#00adb5";
+            statusText.textContent = "Local video loaded. Turn on mic to enable recording.";
+            document.querySelector('.file-upload-btn').textContent = `📁 ${file.name.substring(0, 25)}...`;
         }
     });
 
     ytLoadBtn.addEventListener('click', () => {
-        const ytId = extractYouTubeID(ytUrlInput.value);
-        if (ytId) {
+        const ytId = ytUrlInput.value.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
+        if (ytId && ytId[2].length === 11) {
             localVideo.style.display = 'none';
             localVideo.pause();
             vidVolContainer.style.display = 'none'; 
-            recPanel.style.display = 'none'; // Hide recorder for YT
+            recPanel.style.display = 'none'; 
             usingLocalVideo = false;
             
             ytContainer.style.display = 'block';
-            ytContainer.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}?autoplay=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-            statusText.textContent = "YouTube loaded (Recording disabled). Turn on the mic to sing.";
-        } else {
-            alert("Invalid YouTube link");
-        }
+            ytContainer.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId[2]}?autoplay=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+            statusText.textContent = "YouTube loaded. Note: Cannot record YouTube sessions.";
+        } else alert("Invalid YouTube link");
     });
 
-    function extractYouTubeID(url) {
-        const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
-        return (match && match[2].length === 11) ? match[2] : null;
-    }
-
-    // --- AUDIO MIXER ---
-
+    // --- AUDIO MIXER & ANTI-FEEDBACK ---
     startMicBtn.addEventListener('click', async () => {
         if (isMicActive) return;
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
         try {
+            // Turned Echo Cancellation ON to help fight speaker feedback naturally
             const stream = await navigator.mediaDevices.getUserMedia({ 
-                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } 
             });
 
             const micSource = audioCtx.createMediaStreamSource(stream);
+            
+            // 1. Anti-Feedback: High-Pass Filter (Removes deep humming)
+            humFilterNode = audioCtx.createBiquadFilter();
+            humFilterNode.type = 'highpass';
+            humFilterNode.frequency.value = 20; // Default: let everything through
+
+            // 2. Anti-Feedback: Low-Pass Filter (Removes high-pitched screeching)
+            screechFilterNode = audioCtx.createBiquadFilter();
+            screechFilterNode.type = 'lowpass';
+            screechFilterNode.frequency.value = 20000; // Default: let everything through
+
             micGain = audioCtx.createGain();
             
             compressor = audioCtx.createDynamicsCompressor();
             compressor.threshold.value = -30;
-            compressor.knee.value = 10;
             compressor.ratio.value = 12;
-            compressor.attack.value = 0;
-            compressor.release.value = 0.25;
 
             delayNode = audioCtx.createDelay();
             delayNode.delayTime.value = 0.25; 
             feedbackNode = audioCtx.createGain();
             feedbackNode.gain.value = 0.2; 
 
-            // Setup Recording Destination
             audioDest = audioCtx.createMediaStreamDestination();
 
-            // Mic Routing
-            micSource.connect(micGain);
-            micGain.connect(compressor);
-            micGain.connect(delayNode);
+            // Routing: Mic -> EQ Filters -> Gain -> Effects -> Compressor
+            micSource.connect(humFilterNode);
+            humFilterNode.connect(screechFilterNode);
+            screechFilterNode.connect(micGain);
+            
+            micGain.connect(compressor); // Dry signal
+            micGain.connect(delayNode);  // Wet signal (Echo)
             delayNode.connect(feedbackNode);
             feedbackNode.connect(delayNode); 
             delayNode.connect(compressor); 
             
-            // Connect mic output to speakers AND recorder destination
             compressor.connect(audioCtx.destination);
             compressor.connect(audioDest);
 
-            // Local Video Routing
             if (!videoGain) {
                 const videoSource = audioCtx.createMediaElementSource(localVideo);
                 videoGain = audioCtx.createGain();
                 videoSource.connect(videoGain);
-                // Connect video output to speakers AND recorder destination
                 videoGain.connect(audioCtx.destination);
                 videoGain.connect(audioDest);
             }
 
-            micSlider.disabled = echoSlider.disabled = videoSlider.disabled = false;
-            startMicBtn.style.backgroundColor = "#4e9f3d";
-            startMicBtn.textContent = "🎙️ Mic Active & Boosted";
+            // Enable UI
+            [micSlider, echoSlider, videoSlider, humSlider, screechSlider].forEach(s => s.disabled = false);
+            startMicBtn.style.background = "var(--success)";
+            startMicBtn.textContent = "🎙️ Mic & Filters Active";
             isMicActive = true;
             
             if (usingLocalVideo) recPanel.style.display = 'block';
             if (audioCtx.state === 'suspended') await audioCtx.resume();
             
-        } catch (err) {
-            alert("Microphone Error. Check permissions and HTTPS.");
-        }
+        } catch (err) { alert("Mic Error. Check permissions/HTTPS."); }
     });
 
-    // --- RECORDING LOGIC ---
+    // --- SLIDERS ---
+    micSlider.addEventListener('input', e => { if(micGain) micGain.gain.value = e.target.value; document.getElementById('mic-val').textContent = Math.round(e.target.value * 100) + "%"; });
+    echoSlider.addEventListener('input', e => { if(feedbackNode) feedbackNode.gain.value = e.target.value; document.getElementById('echo-val').textContent = Math.round(e.target.value * 100) + "%"; });
+    videoSlider.addEventListener('input', e => { if(videoGain) videoGain.gain.value = e.target.value; document.getElementById('vid-val').textContent = Math.round(e.target.value * 100) + "%"; });
+    
+    // Feedback Control Events
+    humSlider.addEventListener('input', e => { if(humFilterNode) humFilterNode.frequency.value = e.target.value; document.getElementById('hum-val').textContent = e.target.value + " Hz"; });
+    screechSlider.addEventListener('input', e => { if(screechFilterNode) screechFilterNode.frequency.value = e.target.value; document.getElementById('screech-val').textContent = e.target.value + " Hz"; });
 
+    // --- RECORDING ---
     startRecBtn.addEventListener('click', () => {
         recordedChunks = [];
         const combinedStream = new MediaStream();
-        
-        // 1. Add mixed audio track
         combinedStream.addTrack(audioDest.stream.getAudioTracks()[0]);
         
-        // 2. Add video track from the local HTML5 video
-        // (Uses the experimental captureStream API)
         const captureFunc = localVideo.captureStream || localVideo.mozCaptureStream;
         if (captureFunc) {
             const vidStream = captureFunc.call(localVideo);
-            if (vidStream.getVideoTracks().length > 0) {
-                combinedStream.addTrack(vidStream.getVideoTracks()[0]);
-            }
-        } else {
-            console.warn("Video capture not supported on this browser. Audio only will be recorded.");
+            if (vidStream.getVideoTracks().length > 0) combinedStream.addTrack(vidStream.getVideoTracks()[0]);
         }
 
-        // Initialize MediaRecorder
-        const options = { mimeType: 'video/webm' };
-        try {
-            mediaRecorder = new MediaRecorder(combinedStream, options);
-        } catch (e) {
-            mediaRecorder = new MediaRecorder(combinedStream); // Fallback
-        }
+        try { mediaRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm' }); } 
+        catch (e) { mediaRecorder = new MediaRecorder(combinedStream); }
 
-        mediaRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0) recordedChunks.push(e.data);
-        };
-
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
         mediaRecorder.onstop = () => {
-            const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            downloadLink.href = url;
-            downloadLink.download = 'my_karaoke_performance.webm';
-            downloadLink.style.display = 'block';
+            const url = URL.createObjectURL(new Blob(recordedChunks, { type: 'video/webm' }));
+            downloadLink.href = url; downloadLink.download = 'karaoke.webm'; downloadLink.style.display = 'block';
         };
 
-        mediaRecorder.start();
-        localVideo.play(); // Auto-start video when recording starts
-        
-        startRecBtn.disabled = true;
-        stopRecBtn.disabled = false;
-        startRecBtn.textContent = "Recording...";
-        downloadLink.style.display = 'none';
+        mediaRecorder.start(); localVideo.play();
+        startRecBtn.disabled = true; stopRecBtn.disabled = false;
+        startRecBtn.textContent = "Recording..."; downloadLink.style.display = 'none';
     });
 
     stopRecBtn.addEventListener('click', () => {
-        mediaRecorder.stop();
-        localVideo.pause(); // Pause video when recording stops
-        
-        startRecBtn.disabled = false;
-        stopRecBtn.disabled = true;
-        startRecBtn.textContent = "Start Recording";
+        mediaRecorder.stop(); localVideo.pause();
+        startRecBtn.disabled = false; stopRecBtn.disabled = true;
+        startRecBtn.textContent = "🔴 Start";
     });
-
-    // Sliders
-    micSlider.addEventListener('input', (e) => { if(micGain) micGain.gain.value = e.target.value; document.getElementById('mic-val').textContent = Math.round(e.target.value * 100) + "%"; });
-    echoSlider.addEventListener('input', (e) => { if(feedbackNode) feedbackNode.gain.value = e.target.value; document.getElementById('echo-val').textContent = Math.round(e.target.value * 100) + "%"; });
-    videoSlider.addEventListener('input', (e) => { if(videoGain) videoGain.gain.value = e.target.value; document.getElementById('vid-val').textContent = Math.round(e.target.value * 100) + "%"; });
 </script>
-
 </body>
 </html>
