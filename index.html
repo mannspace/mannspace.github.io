@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Karaoke Studio Pro v3</title>
+    <title>Karaoke Studio Pro v3.1 (Fixed)</title>
     <style>
         /* Modern UI Variables */
         :root {
@@ -128,6 +128,8 @@
             <label class="slider-label">Echo / Reverb <span id="echo-val">20%</span></label>
             <input type="range" id="echo-volume" min="0" max="1" step="0.05" value="0.2" disabled>
         </div>
+        
+        <!-- ERROR FIXED: This container is correctly managed now -->
         <div class="slider-group" id="local-vid-vol-container">
             <label class="slider-label">Music Volume <span id="vid-val">100%</span></label>
             <input type="range" id="video-volume" min="0" max="2" step="0.1" value="1" disabled>
@@ -177,12 +179,15 @@
     const startMicBtn = document.getElementById('start-mic-btn');
     const autoCalibrateBtn = document.getElementById('auto-calibrate-btn');
     
-    // Audio Sliders
+    // Audio Sliders & Containers
     const micSlider = document.getElementById('mic-volume');
     const echoSlider = document.getElementById('echo-volume');
     const videoSlider = document.getElementById('video-volume');
     const humSlider = document.getElementById('hum-filter');
     const screechSlider = document.getElementById('screech-filter');
+    
+    // ERROR FIXED: Re-added missing DOM element variable
+    const vidVolContainer = document.getElementById('local-vid-vol-container'); 
     
     // Recording Elements
     const startRecBtn = document.getElementById('start-rec');
@@ -194,6 +199,7 @@
     let humFilterNode, screechFilterNode;
     let isMicActive = false, usingLocalVideo = false;
     let mediaRecorder, recordedChunks = [];
+    let fileExtension = 'webm'; // Default format
 
     // --- MEDIA HANDLING ---
     videoUpload.addEventListener('change', (e) => {
@@ -202,6 +208,7 @@
             ytContainer.style.display = 'none';
             localVideo.src = URL.createObjectURL(file);
             localVideo.style.display = 'block';
+            vidVolContainer.style.display = 'block'; 
             usingLocalVideo = true;
             document.querySelector('.file-upload-btn').textContent = `📁 ${file.name.substring(0, 20)}...`;
             
@@ -214,8 +221,11 @@
     ytLoadBtn.addEventListener('click', () => {
         const ytId = ytUrlInput.value.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
         if (ytId && ytId[2].length === 11) {
-            localVideo.style.display = 'none'; localVideo.pause();
+            localVideo.style.display = 'none'; 
+            localVideo.pause();
+            vidVolContainer.style.display = 'none'; 
             usingLocalVideo = false;
+            
             ytContainer.style.display = 'block';
             ytContainer.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId[2]}?autoplay=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
             
@@ -294,7 +304,7 @@
         
         const analyser = audioCtx.createAnalyser();
         analyser.fftSize = 1024;
-        micSource.connect(analyser); // Tap into raw mic input
+        micSource.connect(analyser); 
         
         const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
@@ -330,8 +340,8 @@
             if (highNoise > 20) newScreech = 12000;
             if (highNoise > 60) newScreech = 8000;
             
-            if (totalNoise < 10) newBoost = 3.5; // Quiet room, boost mic
-            else if (totalNoise > 40) newBoost = 1.0; // Loud room, lower mic
+            if (totalNoise < 10) newBoost = 3.5; 
+            else if (totalNoise > 40) newBoost = 1.0; 
             
             // Apply to Audio Nodes
             humFilterNode.frequency.value = newHum;
@@ -346,6 +356,9 @@
             autoCalibrateBtn.textContent = "✅ Calibrated Successfully!";
             autoCalibrateBtn.style.background = "var(--success)";
             
+            // Clean up node
+            micSource.disconnect(analyser);
+
             setTimeout(() => {
                 autoCalibrateBtn.disabled = false;
                 autoCalibrateBtn.textContent = "✨ Auto-Calibrate to Room";
@@ -372,15 +385,27 @@
         if (captureFunc) {
             const vidStream = captureFunc.call(localVideo);
             if (vidStream.getVideoTracks().length > 0) combinedStream.addTrack(vidStream.getVideoTracks()[0]);
+        } else {
+            console.warn("Video capture unsupported on this device. Audio-only recording applied.");
         }
 
-        try { mediaRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm' }); } 
+        // ERROR FIXED: Fallback format for iPhones/Safari
+        let options = { mimeType: 'video/webm' };
+        if (typeof MediaRecorder !== "undefined" && !MediaRecorder.isTypeSupported('video/webm')) {
+            options = { mimeType: 'video/mp4' };
+            fileExtension = 'mp4';
+        }
+
+        try { mediaRecorder = new MediaRecorder(combinedStream, options); } 
         catch (e) { mediaRecorder = new MediaRecorder(combinedStream); }
 
         mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
         mediaRecorder.onstop = () => {
-            const url = URL.createObjectURL(new Blob(recordedChunks, { type: 'video/webm' }));
-            downloadLink.href = url; downloadLink.download = 'karaoke.webm'; downloadLink.style.display = 'block';
+            const blobType = fileExtension === 'mp4' ? 'video/mp4' : 'video/webm';
+            const url = URL.createObjectURL(new Blob(recordedChunks, { type: blobType }));
+            downloadLink.href = url; 
+            downloadLink.download = `karaoke_session.${fileExtension}`; 
+            downloadLink.style.display = 'block';
         };
 
         mediaRecorder.start(); localVideo.play();
