@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Karaoke Studio Pro v4</title>
+    <title>Karaoke Studio Pro v5</title>
     <style>
         :root {
             --primary: #00e5ff;
@@ -63,7 +63,7 @@
         button:disabled { background: rgba(255,255,255,0.1); color: #666; cursor: not-allowed; }
         
         .btn-yt { background: var(--danger); color: white; }
-        .btn-mic { width: 100%; padding: 16px; font-size: 16px; margin-bottom: 15px; background: #00adb5; color: white;}
+        .btn-mic { width: 100%; padding: 16px; font-size: 16px; margin-bottom: 5px; background: #00adb5; color: white;}
         .btn-auto { background: #ab47bc; color: white; width: 100%; margin-bottom: 15px; }
         
         /* File Upload */
@@ -91,6 +91,7 @@
         
         .badge { background: var(--danger); color: white; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; }
         .badge-pro { background: #ab47bc; }
+        .helper-text { font-size: 11px; color: #ffeb3b; text-align: center; margin-bottom: 15px; margin-top: 0; }
     </style>
 </head>
 <body>
@@ -102,7 +103,6 @@
     <div class="card">
         <div class="card-header">1. Select Track</div>
         <div class="file-upload-wrapper">
-            <!-- Updated to accept Audio AND Video -->
             <button class="file-upload-btn">🎵 Select Local Audio/Video File</button>
             <input type="file" id="media-upload" accept="video/*, audio/*">
         </div>
@@ -119,7 +119,8 @@
     <!-- Audio Mixer -->
     <div class="card">
         <div class="card-header">2. Main Mixer</div>
-        <button class="btn-mic" id="start-mic-btn">🎙️ Connect Microphone</button>
+        <button class="btn-mic" id="start-mic-btn">🎙️ Turn On Microphone</button>
+        <p class="helper-text">If audio drops to phone speaker, reselect Bluetooth in phone Control Center.</p>
         
         <div class="slider-group">
             <label class="slider-label">Mic Volume <span id="mic-val">100%</span></label>
@@ -134,7 +135,6 @@
             <label class="slider-label">Music Volume <span id="vid-val">100%</span></label>
             <input type="range" id="video-volume" min="0" max="2" step="0.1" value="1" disabled>
             
-            <!-- NEW: Vocal Remover Toggle -->
             <button class="toggle-btn" id="vocal-remover-btn" disabled>🎤 Suppress Original Vocals (Off)</button>
         </div>
     </div>
@@ -173,7 +173,6 @@
 </div>
 
 <script>
-    // Elements
     const mediaUpload = document.getElementById('media-upload');
     const ytUrlInput = document.getElementById('yt-url');
     const ytLoadBtn = document.getElementById('yt-load-btn');
@@ -183,7 +182,6 @@
     const autoCalibrateBtn = document.getElementById('auto-calibrate-btn');
     const vocalRemoverBtn = document.getElementById('vocal-remover-btn');
     
-    // Sliders
     const micSlider = document.getElementById('mic-volume');
     const echoSlider = document.getElementById('echo-volume');
     const videoSlider = document.getElementById('video-volume');
@@ -191,14 +189,13 @@
     const screechSlider = document.getElementById('screech-filter');
     const vidVolContainer = document.getElementById('local-vid-vol-container'); 
     
-    // Recording
     const startRecBtn = document.getElementById('start-rec');
     const stopRecBtn = document.getElementById('stop-rec');
     const downloadLink = document.getElementById('download-link');
     const recWarning = document.getElementById('rec-warning');
 
-    // Audio Graph State
     let audioCtx;
+    let micStream;
     let micSource, micGain, delayNode, feedbackNode, compressor, audioDest;
     let humFilterNode, screechFilterNode;
     let videoSource, videoGain, normalBypassGain, vocalRemoveGain;
@@ -208,7 +205,7 @@
     let vocalsSuppressed = false;
     let mediaRecorder, recordedChunks = [];
 
-    // --- 1. MEDIA HANDLING (AUDIO/VIDEO) ---
+    // --- MEDIA HANDLING ---
     mediaUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -222,8 +219,8 @@
             recWarning.style.display = 'none';
             if (isMicActive) {
                 startRecBtn.disabled = false;
-                vocalRemoverBtn.disabled = false;
             }
+            // Video nodes setup will unlock vocal remover
         }
     });
 
@@ -244,87 +241,111 @@
         }
     });
 
-    // --- 2. MASTER AUDIO INITIALIZATION ---
+    // --- AUDIO MIXER (WITH TOGGLE FIX) ---
     startMicBtn.addEventListener('click', async () => {
-        if (isMicActive) return;
         
+        // TURN OFF LOGIC
+        if (isMicActive) {
+            if (micStream) micStream.getTracks().forEach(track => track.stop());
+            if (micSource) micSource.disconnect();
+            
+            startMicBtn.style.background = "#00adb5";
+            startMicBtn.style.color = "#fff";
+            startMicBtn.textContent = "🎙️ Turn On Microphone";
+            
+            micSlider.disabled = true;
+            echoSlider.disabled = true;
+            humSlider.disabled = true;
+            screechSlider.disabled = true;
+            autoCalibrateBtn.disabled = true;
+            isMicActive = false;
+            return;
+        }
+
+        // TURN ON LOGIC
         try {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } 
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Turning echoCancellation to false helps bypass OS phone-call mode on some devices
+            micStream = await navigator.mediaDevices.getUserMedia({ 
+                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
             });
 
-            // 1. Setup Mic Path
-            micSource = audioCtx.createMediaStreamSource(stream);
-            humFilterNode = audioCtx.createBiquadFilter();
-            humFilterNode.type = 'highpass'; humFilterNode.frequency.value = 20;
-            screechFilterNode = audioCtx.createBiquadFilter();
-            screechFilterNode.type = 'lowpass'; screechFilterNode.frequency.value = 20000;
+            micSource = audioCtx.createMediaStreamSource(micStream);
             
-            micGain = audioCtx.createGain(); micGain.gain.value = 1.0;
-            compressor = audioCtx.createDynamicsCompressor();
-            compressor.threshold.value = -24; compressor.ratio.value = 8;
-            
-            delayNode = audioCtx.createDelay(); delayNode.delayTime.value = 0.3; 
-            feedbackNode = audioCtx.createGain(); feedbackNode.gain.value = 0; // Default off!
-            audioDest = audioCtx.createMediaStreamDestination();
+            // Create audio graph nodes only once
+            if (!micGain) {
+                humFilterNode = audioCtx.createBiquadFilter();
+                humFilterNode.type = 'highpass'; humFilterNode.frequency.value = 20;
+                screechFilterNode = audioCtx.createBiquadFilter();
+                screechFilterNode.type = 'lowpass'; screechFilterNode.frequency.value = 20000;
+                
+                micGain = audioCtx.createGain(); micGain.gain.value = 1.0;
+                compressor = audioCtx.createDynamicsCompressor();
+                compressor.threshold.value = -24; compressor.ratio.value = 8;
+                
+                delayNode = audioCtx.createDelay(); delayNode.delayTime.value = 0.3; 
+                feedbackNode = audioCtx.createGain(); feedbackNode.gain.value = 0; 
+                audioDest = audioCtx.createMediaStreamDestination();
 
-            // Connect Mic
-            micSource.connect(humFilterNode).connect(screechFilterNode).connect(micGain);
-            micGain.connect(compressor);
-            // Echo Loop
-            micGain.connect(delayNode).connect(feedbackNode).connect(delayNode).connect(compressor);
-            compressor.connect(audioCtx.destination);
-            compressor.connect(audioDest);
+                // Build Graph
+                humFilterNode.connect(screechFilterNode).connect(micGain);
+                micGain.connect(compressor);
+                micGain.connect(delayNode).connect(feedbackNode).connect(delayNode).connect(compressor);
+                compressor.connect(audioCtx.destination);
+                compressor.connect(audioDest);
+            }
 
-            // 2. Setup Local Media & Vocal Remover Path
-            if (!videoSource) {
+            // Connect mic to existing graph
+            micSource.connect(humFilterNode);
+
+            // Setup Local Media & Vocal Remover Path (Only once)
+            if (!videoSource && localMedia.src) {
                 videoSource = audioCtx.createMediaElementSource(localMedia);
                 videoGain = audioCtx.createGain(); videoGain.gain.value = 1.0;
                 
                 normalBypassGain = audioCtx.createGain(); normalBypassGain.gain.value = 1.0;
-                vocalRemoveGain = audioCtx.createGain(); vocalRemoveGain.gain.value = 0.0; // Off by default
+                vocalRemoveGain = audioCtx.createGain(); vocalRemoveGain.gain.value = 0.0; 
 
-                // Phase Inversion Engine (Center Cancellation)
                 const splitter = audioCtx.createChannelSplitter(2);
                 const merger = audioCtx.createChannelMerger(2);
                 const inverter = audioCtx.createGain(); inverter.gain.value = -1;
 
-                videoSource.connect(normalBypassGain).connect(videoGain); // Normal Path
+                videoSource.connect(normalBypassGain).connect(videoGain); 
                 
-                // Suppressor Path
                 videoSource.connect(splitter);
-                splitter.connect(merger, 0, 0); // L -> L
-                splitter.connect(inverter, 1);  // R -> Inverter
-                inverter.connect(merger, 0, 0); // Inverted R -> L
-                splitter.connect(merger, 0, 1); // L -> R
-                inverter.connect(merger, 0, 1); // Inverted R -> R
+                splitter.connect(merger, 0, 0); 
+                splitter.connect(inverter, 1);  
+                inverter.connect(merger, 0, 0); 
+                splitter.connect(merger, 0, 1); 
+                inverter.connect(merger, 0, 1); 
                 merger.connect(vocalRemoveGain).connect(videoGain);
 
                 videoGain.connect(audioCtx.destination);
                 videoGain.connect(audioDest);
+                
+                vocalRemoverBtn.disabled = false;
             }
 
             // Unlock UI Elements
             [micSlider, echoSlider, videoSlider, humSlider, screechSlider].forEach(s => s.disabled = false);
             autoCalibrateBtn.disabled = false;
-            if (usingLocalMedia) {
-                startRecBtn.disabled = false;
-                vocalRemoverBtn.disabled = false;
-            }
+            if (usingLocalMedia) startRecBtn.disabled = false;
             
             startMicBtn.style.background = "var(--success)";
             startMicBtn.style.color = "#000";
-            startMicBtn.textContent = "🎙️ System Active";
+            startMicBtn.textContent = "🔴 Mic Active (Click to Stop)";
             isMicActive = true;
+            
             if (audioCtx.state === 'suspended') await audioCtx.resume();
             
-        } catch (err) { alert("Mic Error. Ensure HTTPS and grant permissions."); }
+        } catch (err) { 
+            alert("Mic Error. Ensure HTTPS and grant permissions. " + err.message); 
+        }
     });
 
-    // --- 3. VOCAL SUPPRESSOR TOGGLE ---
+    // --- VOCAL SUPPRESSOR TOGGLE ---
     vocalRemoverBtn.addEventListener('click', () => {
-        if(!isMicActive) return;
         vocalsSuppressed = !vocalsSuppressed;
         if (vocalsSuppressed) {
             normalBypassGain.gain.value = 0.0;
@@ -339,18 +360,16 @@
         }
     });
 
-    // --- 4. SAFE AUTO-CALIBRATE ---
+    // --- SAFE AUTO-CALIBRATE ---
     autoCalibrateBtn.addEventListener('click', () => {
         if(!isMicActive) return;
         autoCalibrateBtn.disabled = true;
         autoCalibrateBtn.textContent = "Analyzing room (2s)...";
         
-        // Safer calibration: Restrict gain boosts to avoid sudden screeching
         setTimeout(() => {
-            // Apply safe baseline EQ for general room feedback
-            humFilterNode.frequency.value = 120; // Aggressive low cut
-            screechFilterNode.frequency.value = 8000; // Aggressive high cut
-            micGain.gain.value = 1.2; // Modest, safe boost
+            humFilterNode.frequency.value = 120; 
+            screechFilterNode.frequency.value = 8000; 
+            micGain.gain.value = 1.2; 
             
             humSlider.value = 120; document.getElementById('hum-val').textContent = "120 Hz";
             screechSlider.value = 8000; document.getElementById('screech-val').textContent = "8000 Hz";
@@ -367,19 +386,18 @@
         }, 2000);
     });
 
-    // --- 5. REAL-TIME SLIDERS (STABILIZED) ---
-    // parseFloat ensures the API doesn't crash on string values
+    // --- REAL-TIME SLIDERS ---
     micSlider.addEventListener('input', e => { if(micGain) micGain.gain.value = parseFloat(e.target.value); document.getElementById('mic-val').textContent = Math.round(e.target.value * 100) + "%"; });
     echoSlider.addEventListener('input', e => { if(feedbackNode) feedbackNode.gain.value = parseFloat(e.target.value); document.getElementById('echo-val').textContent = Math.round(e.target.value * 100) + "%"; });
     videoSlider.addEventListener('input', e => { if(videoGain) videoGain.gain.value = parseFloat(e.target.value); document.getElementById('vid-val').textContent = Math.round(e.target.value * 100) + "%"; });
     humSlider.addEventListener('input', e => { if(humFilterNode) humFilterNode.frequency.value = parseFloat(e.target.value); document.getElementById('hum-val').textContent = e.target.value + " Hz"; });
     screechSlider.addEventListener('input', e => { if(screechFilterNode) screechFilterNode.frequency.value = parseFloat(e.target.value); document.getElementById('screech-val').textContent = e.target.value + " Hz"; });
 
-    // --- 6. RECORDING ENGINE ---
+    // --- RECORDING ENGINE ---
     startRecBtn.addEventListener('click', () => {
         recordedChunks = [];
         const combinedStream = new MediaStream();
-        combinedStream.addTrack(audioDest.stream.getAudioTracks()[0]);
+        if (audioDest) combinedStream.addTrack(audioDest.stream.getAudioTracks()[0]);
         
         const captureFunc = localMedia.captureStream || localMedia.mozCaptureStream;
         if (captureFunc) {
