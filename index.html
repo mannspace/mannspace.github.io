@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Karaoke Studio Pro - Clean Audio Edition</title>
+    <title>Karaoke Studio Pro - Direct Audio</title>
     <style>
         :root {
             --primary: #00e5ff;
             --danger: #ff1744;
             --success: #00e676;
-            --bg-gradient: linear-gradient(135deg, #10151a, #1a2a35, #223743);
+            --bg-gradient: linear-gradient(135deg, #0d1117, #161b22, #21262d);
             --card-bg: rgba(255, 255, 255, 0.05);
             --card-border: rgba(255, 255, 255, 0.1);
         }
@@ -37,7 +37,7 @@
 
         .card-header {
             font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
-            margin-bottom: 15px; color: #90a4ae; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;
+            margin-bottom: 15px; color: #8b949e; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;
         }
 
         /* Media Players */
@@ -60,7 +60,7 @@
         button:disabled { background: rgba(255,255,255,0.1); color: #666; cursor: not-allowed; }
         
         .btn-yt { background: #ff0000; color: white; }
-        .btn-mic { width: 100%; padding: 15px; font-size: 16px; margin-bottom: 15px; background: #00adb5; color: white;}
+        .btn-mic { width: 100%; padding: 15px; font-size: 16px; margin-bottom: 10px; background: #00adb5; color: white;}
         .btn-mic.active { background: var(--danger); color: white; }
         
         .file-upload-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
@@ -70,7 +70,7 @@
         /* Sliders */
         .slider-group { margin-bottom: 18px; }
         .slider-group:last-child { margin-bottom: 0; }
-        label.slider-label { font-size: 13px; font-weight: 500; color: #ccc; display: flex; justify-content: space-between; margin-bottom: 8px; }
+        label.slider-label { font-size: 13px; font-weight: 500; color: #c9d1d9; display: flex; justify-content: space-between; margin-bottom: 8px; }
         input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; outline: none; }
         input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--primary); cursor: pointer; }
         input[type="range"]:disabled::-webkit-slider-thumb { background: #555; }
@@ -83,7 +83,9 @@
         .rec-controls button { flex: 1; }
         #start-rec { background: var(--danger); color: white; }
         #download-link { display: none; text-align: center; margin-top: 15px; background: var(--success); padding: 12px; border-radius: 6px; text-decoration: none; color: black; font-weight: bold; }
-        .info-text { font-size: 12px; color: #888; text-align: center; margin-top: -5px; margin-bottom: 15px; }
+        
+        .info-text { font-size: 12px; color: #ffeb3b; text-align: center; margin-top: 0px; margin-bottom: 15px; }
+        .hint-text { font-size: 11px; color: #8b949e; text-align: center; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -110,16 +112,16 @@
 
     <!-- Mixer -->
     <div class="card">
-        <div class="card-header">2. Clean Mixer</div>
+        <div class="card-header">2. Direct Mixer</div>
         <button class="btn-mic" id="start-mic-btn">🎙️ Turn On Microphone</button>
-        <p class="info-text">If audio routes to your phone ear-piece, manually select your Bluetooth speaker in your phone's Control Center.</p>
+        <p class="hint-text">For absolute best quality and zero physical echo, use wired headphones.</p>
         
         <div class="slider-group">
             <label class="slider-label">Microphone Volume <span id="mic-val">100%</span></label>
             <input type="range" id="mic-volume" min="0" max="3" step="0.1" value="1" disabled>
         </div>
         <div class="slider-group">
-            <label class="slider-label">Echo / Reverb <span id="echo-val">0%</span></label>
+            <label class="slider-label">Studio Echo <span id="echo-val">0%</span></label>
             <input type="range" id="echo-volume" min="0" max="1" step="0.05" value="0" disabled>
         </div>
         
@@ -134,7 +136,7 @@
     <!-- Recorder -->
     <div class="card" id="rec-panel">
         <div class="card-header">3. Studio Recorder</div>
-        <p class="info-text" id="rec-warning" style="color: #ffb300;">⚠️ Load a local file and turn on Mic to record.</p>
+        <p class="info-text" id="rec-warning">⚠️ Load a local file and turn on Mic to record.</p>
         <div class="rec-controls">
             <button id="start-rec" disabled>🔴 Start Recording</button>
             <button id="stop-rec" disabled>⏹ Stop</button>
@@ -144,7 +146,6 @@
 </div>
 
 <script>
-    // Elements
     const mediaUpload = document.getElementById('media-upload');
     const ytUrlInput = document.getElementById('yt-url');
     const ytLoadBtn = document.getElementById('yt-load-btn');
@@ -153,22 +154,19 @@
     const startMicBtn = document.getElementById('start-mic-btn');
     const vocalRemoverBtn = document.getElementById('vocal-remover-btn');
     
-    // Sliders
     const micSlider = document.getElementById('mic-volume');
     const echoSlider = document.getElementById('echo-volume');
     const videoSlider = document.getElementById('video-volume');
     const fileBtnText = document.getElementById('file-btn-text');
     
-    // Recording
     const startRecBtn = document.getElementById('start-rec');
     const stopRecBtn = document.getElementById('stop-rec');
     const downloadLink = document.getElementById('download-link');
     const recWarning = document.getElementById('rec-warning');
 
-    // Audio Graph State
-    let audioCtx;
-    let micStream, micSource, mediaElementSource;
-    let micGain, mediaGain, masterGain, delayNode, feedbackNode, audioDest;
+    let audioCtx, micStream, micSource, mediaElementSource;
+    let micGain, mediaGain, masterGain, audioDest;
+    let echoGateGain, delayNode, feedbackNode; // Echo completely isolated
     let normalBypassGain, vocalRemoveGain;
     
     let isMicActive = false;
@@ -185,14 +183,10 @@
             localMedia.style.display = 'block';
             usingLocalMedia = true;
             fileBtnText.textContent = `🎵 ${file.name.substring(0, 30)}...`;
-            
-            // Allow basic volume control immediately
             videoSlider.disabled = false;
             
             recWarning.style.display = 'none';
             checkRecordingEligibility();
-            
-            // If mic is already on, connect the new file to the graph
             if (isMicActive) setupMediaRouting();
         }
     });
@@ -223,61 +217,61 @@
         }
     }
 
-    // --- 2. MASTER AUDIO ROUTING (CLEAN) ---
+    // --- 2. AUDIO ENGINE & BLUETOOTH FIX ---
     startMicBtn.addEventListener('click', async () => {
-        
-        // TOGGLE OFF
         if (isMicActive) {
             if (micStream) micStream.getTracks().forEach(track => track.stop());
             if (micSource) micSource.disconnect();
             
             startMicBtn.classList.remove('active');
             startMicBtn.textContent = "🎙️ Turn On Microphone";
-            
-            micSlider.disabled = true;
-            echoSlider.disabled = true;
-            isMicActive = false;
-            checkRecordingEligibility();
+            micSlider.disabled = true; echoSlider.disabled = true;
+            isMicActive = false; checkRecordingEligibility();
             return;
         }
 
-        // TOGGLE ON
         try {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             
+            // BLUETOOTH FIX: Forcing these to FALSE tells the OS "This is pro audio, do not switch to phone call mode"
             micStream = await navigator.mediaDevices.getUserMedia({ 
-                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false } 
+                audio: { 
+                    echoCancellation: false, 
+                    noiseSuppression: false, 
+                    autoGainControl: false 
+                } 
             });
 
-            // Initialize Master Nodes once
             if (!masterGain) {
                 masterGain = audioCtx.createGain();
-                audioDest = audioCtx.createMediaStreamDestination(); // For recording
-                masterGain.connect(audioCtx.destination); // To speakers
-                masterGain.connect(audioDest); // To recorder
+                audioDest = audioCtx.createMediaStreamDestination(); 
+                masterGain.connect(audioCtx.destination); 
+                masterGain.connect(audioDest); 
             }
 
-            // Clean Mic Path
             micSource = audioCtx.createMediaStreamSource(micStream);
             micGain = audioCtx.createGain(); 
             micGain.gain.value = parseFloat(micSlider.value);
             
-            // Clean Delay Path (Bypassed if gain is 0)
+            // ECHO FIX: The Echo Gate
+            // The echo system is entirely separated from the direct microphone feed.
+            echoGateGain = audioCtx.createGain(); echoGateGain.gain.value = 0; // Starts completely silent
             delayNode = audioCtx.createDelay(); delayNode.delayTime.value = 0.3; 
-            feedbackNode = audioCtx.createGain(); feedbackNode.gain.value = parseFloat(echoSlider.value);
+            feedbackNode = audioCtx.createGain(); feedbackNode.gain.value = 0;
 
-            // Connect Mic: Mic -> Gain -> Master
+            // Direct route: Mic -> MicGain -> Master (Zero delay, zero echo)
             micSource.connect(micGain);
             micGain.connect(masterGain);
             
-            // Connect Echo: Mic -> Delay -> Feedback -> Master
-            micGain.connect(delayNode).connect(feedbackNode).connect(masterGain);
-            feedbackNode.connect(delayNode); // loop
+            // Echo route: MicGain -> Gate -> Delay -> Master
+            micGain.connect(echoGateGain);
+            echoGateGain.connect(delayNode);
+            delayNode.connect(masterGain);
+            delayNode.connect(feedbackNode);
+            feedbackNode.connect(delayNode); 
 
-            // Route Media if loaded
             if (usingLocalMedia) setupMediaRouting();
 
-            // Enable Controls
             micSlider.disabled = false;
             echoSlider.disabled = false;
             
@@ -293,86 +287,74 @@
         }
     });
 
-    // Ensures Media Element is captured exactly once to prevent browser errors
     function setupMediaRouting() {
-        if (!audioCtx) return;
+        if (!audioCtx || mediaElementSource) return;
         
-        if (!mediaElementSource) {
-            mediaElementSource = audioCtx.createMediaElementSource(localMedia);
-            
-            mediaGain = audioCtx.createGain(); 
-            mediaGain.gain.value = parseFloat(videoSlider.value);
-            
-            normalBypassGain = audioCtx.createGain(); normalBypassGain.gain.value = 1.0;
-            vocalRemoveGain = audioCtx.createGain(); vocalRemoveGain.gain.value = 0.0;
-
-            // Vocal Remover Phase Inversion Math
-            const splitter = audioCtx.createChannelSplitter(2);
-            const merger = audioCtx.createChannelMerger(2);
-            const inverter = audioCtx.createGain(); inverter.gain.value = -1;
-
-            // Path 1: Normal Audio
-            mediaElementSource.connect(normalBypassGain).connect(mediaGain);
-            
-            // Path 2: Suppressed Audio
-            mediaElementSource.connect(splitter);
-            splitter.connect(merger, 0, 0); 
-            splitter.connect(inverter, 1);  
-            inverter.connect(merger, 0, 0); 
-            splitter.connect(merger, 0, 1); 
-            inverter.connect(merger, 0, 1); 
-            merger.connect(vocalRemoveGain).connect(mediaGain);
-
-            // Output to master mixer
-            mediaGain.connect(masterGain);
-        }
+        mediaElementSource = audioCtx.createMediaElementSource(localMedia);
+        mediaGain = audioCtx.createGain(); mediaGain.gain.value = parseFloat(videoSlider.value);
         
+        normalBypassGain = audioCtx.createGain(); normalBypassGain.gain.value = 1.0;
+        vocalRemoveGain = audioCtx.createGain(); vocalRemoveGain.gain.value = 0.0;
+
+        const splitter = audioCtx.createChannelSplitter(2);
+        const merger = audioCtx.createChannelMerger(2);
+        const inverter = audioCtx.createGain(); inverter.gain.value = -1;
+
+        mediaElementSource.connect(normalBypassGain).connect(mediaGain);
+        
+        mediaElementSource.connect(splitter);
+        splitter.connect(merger, 0, 0); 
+        splitter.connect(inverter, 1);  
+        inverter.connect(merger, 0, 0); 
+        splitter.connect(merger, 0, 1); 
+        inverter.connect(merger, 0, 1); 
+        merger.connect(vocalRemoveGain).connect(mediaGain);
+
+        mediaGain.connect(masterGain);
         vocalRemoverBtn.disabled = false;
     }
 
-    // --- 3. VOCAL SUPPRESSOR TOGGLE ---
     vocalRemoverBtn.addEventListener('click', () => {
         if (!mediaElementSource) return;
         vocalsSuppressed = !vocalsSuppressed;
         if (vocalsSuppressed) {
-            normalBypassGain.gain.value = 0.0;
-            vocalRemoveGain.gain.value = 1.0;
-            vocalRemoverBtn.classList.add('active');
-            vocalRemoverBtn.textContent = "🎤 Vocal Suppression: ON";
+            normalBypassGain.gain.value = 0.0; vocalRemoveGain.gain.value = 1.0;
+            vocalRemoverBtn.classList.add('active'); vocalRemoverBtn.textContent = "🎤 Vocal Suppression: ON";
         } else {
-            normalBypassGain.gain.value = 1.0;
-            vocalRemoveGain.gain.value = 0.0;
-            vocalRemoverBtn.classList.remove('active');
-            vocalRemoverBtn.textContent = "🎤 Suppress Track Vocals (Off)";
+            normalBypassGain.gain.value = 1.0; vocalRemoveGain.gain.value = 0.0;
+            vocalRemoverBtn.classList.remove('active'); vocalRemoverBtn.textContent = "🎤 Suppress Track Vocals (Off)";
         }
     });
 
-    // --- 4. PRECISE SLIDER CONTROLS ---
+    // --- 3. HARDWARE SLIDER CONTROLS ---
     micSlider.addEventListener('input', e => { 
         if(micGain) micGain.gain.value = parseFloat(e.target.value); 
         document.getElementById('mic-val').textContent = Math.round(e.target.value * 100) + "%"; 
     });
     
     echoSlider.addEventListener('input', e => { 
-        if(feedbackNode) feedbackNode.gain.value = parseFloat(e.target.value); 
-        document.getElementById('echo-val').textContent = Math.round(e.target.value * 100) + "%"; 
+        const val = parseFloat(e.target.value);
+        if(echoGateGain && feedbackNode) {
+            // Only send audio into the echo chamber if the slider is above 0
+            echoGateGain.gain.value = val > 0 ? 1 : 0; 
+            feedbackNode.gain.value = val;
+        }
+        document.getElementById('echo-val').textContent = Math.round(val * 100) + "%"; 
     });
     
     videoSlider.addEventListener('input', e => { 
         const val = parseFloat(e.target.value);
         if(mediaGain) {
-            mediaGain.gain.value = val; // Control Web Audio Gain
+            mediaGain.gain.value = val; 
         } else {
-            localMedia.volume = val > 1 ? 1 : val; // Fallback to HTML5 volume if mic is off
+            localMedia.volume = val > 1 ? 1 : val;
         }
         document.getElementById('vid-val').textContent = Math.round(val * 100) + "%"; 
     });
 
-    // --- 5. STABILIZED RECORDING ENGINE ---
+    // --- 4. RECORDING ENGINE ---
     startRecBtn.addEventListener('click', () => {
         recordedChunks = [];
-        
-        // Combine the perfect audio mix with the video track
         const tracks = [...audioDest.stream.getAudioTracks()];
         
         if (localMedia.captureStream) {
@@ -383,43 +365,29 @@
         }
         
         const combinedStream = new MediaStream(tracks);
-
-        // Fallback for iOS Safari which prefers MP4
         let options = { mimeType: 'video/webm' };
         if (typeof MediaRecorder !== "undefined" && !MediaRecorder.isTypeSupported('video/webm')) {
             options = { mimeType: 'video/mp4' };
         }
 
-        try { 
-            mediaRecorder = new MediaRecorder(combinedStream, options); 
-        } catch (e) { 
-            mediaRecorder = new MediaRecorder(combinedStream); 
-        }
+        try { mediaRecorder = new MediaRecorder(combinedStream, options); } 
+        catch (e) { mediaRecorder = new MediaRecorder(combinedStream); }
 
         mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
-        
         mediaRecorder.onstop = () => {
             const ext = (mediaRecorder.mimeType || options.mimeType).includes('mp4') ? 'mp4' : 'webm';
             const url = URL.createObjectURL(new Blob(recordedChunks, { type: mediaRecorder.mimeType }));
-            downloadLink.href = url; 
-            downloadLink.download = `Studio_Recording.${ext}`; 
-            downloadLink.style.display = 'block';
+            downloadLink.href = url; downloadLink.download = `Studio_Recording.${ext}`; downloadLink.style.display = 'block';
         };
 
-        mediaRecorder.start(); 
-        localMedia.play();
-        
-        startRecBtn.disabled = true; 
-        stopRecBtn.disabled = false;
-        startRecBtn.textContent = "Recording in Progress..."; 
-        downloadLink.style.display = 'none';
+        mediaRecorder.start(); localMedia.play();
+        startRecBtn.disabled = true; stopRecBtn.disabled = false;
+        startRecBtn.textContent = "Recording in Progress..."; downloadLink.style.display = 'none';
     });
 
     stopRecBtn.addEventListener('click', () => {
-        mediaRecorder.stop(); 
-        localMedia.pause();
-        startRecBtn.disabled = false; 
-        stopRecBtn.disabled = true;
+        mediaRecorder.stop(); localMedia.pause();
+        startRecBtn.disabled = false; stopRecBtn.disabled = true;
         startRecBtn.textContent = "🔴 Start Recording";
     });
 </script>
